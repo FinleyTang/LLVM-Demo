@@ -10,7 +10,7 @@
 //
 // USAGE:
 //    1. Legacy PM
-//      opt -enable-new-pm=0 -load libHelloWorld.dylib -legacy-hello-world -disable-output `\`
+//      opt --bugpoint-enable-legacy-p -load libHelloWorld.dylib -legacy-hello-world -disable-output `\`
 //        <input-llvm-file>
 //    2. New PM
 //      opt -load-pass-plugin=libHelloWorld.dylib -passes="hello-world" `\`
@@ -39,45 +39,34 @@ void visitor(Function &F) {
     errs() << "(llvm-tutor)   number of arguments: " << F.arg_size() << "\n";
 }
 
-// New PM implementation
-struct HelloWorld : PassInfoMixin<HelloWorld> {
-  // Main entry point, takes IR unit to run the pass on (&F) and the
-  // corresponding pass manager (to be queried if need be)
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &) {
+
+// Legacy PM implementation
+struct LegacyHelloWorld : public FunctionPass {
+  static char ID;
+  LegacyHelloWorld() : FunctionPass(ID) {}
+  // Main entry point - the name conveys what unit of IR this is to be run on.
+  bool runOnFunction(Function &F) override {
     visitor(F);
-    return PreservedAnalyses::all();
+    // Doesn't modify the input unit of IR, hence 'false'
+    return false;
   }
-
-  static bool isRequired() { return true; }
 };
-
-
 } // namespace
 
+
+
 //-----------------------------------------------------------------------------
-// New PM Registration
+// Legacy PM Registration
 //-----------------------------------------------------------------------------
-llvm::PassPluginLibraryInfo getHelloWorldPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "HelloWorld", LLVM_VERSION_STRING,
-          [](PassBuilder &PB) {
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, FunctionPassManager &FPM,
-                   ArrayRef<PassBuilder::PipelineElement>) {
-                  if (Name == "hello-world") {
-                    FPM.addPass(HelloWorld());
-                    return true;
-                  }
-                  return false;
-                });
-          }};
-}
+// The address of this variable is used to uniquely identify the pass. The
+// actual value doesn't matter.
+char LegacyHelloWorld::ID = 0;
 
 // This is the core interface for pass plugins. It guarantees that 'opt' will
-// be able to recognize HelloWorld when added to the pass pipeline on the
-// command line, i.e. via '-passes=hello-world'
-extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
-llvmGetPassPluginInfo() {
-  return getHelloWorldPluginInfo();
-}
-
-
+// recognize LegacyHelloWorld when added to the pass pipeline on the command
+// line, i.e.  via '--legacy-hello-world'
+static RegisterPass<LegacyHelloWorld>
+    X("legacy-hello-world", "Hello World Pass",
+      true, // This pass doesn't modify the CFG => true
+      false // This pass is not a pure analysis pass => false
+    );
