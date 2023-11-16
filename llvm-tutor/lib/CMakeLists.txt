@@ -2,10 +2,13 @@
 # ======================================================
 set(LLVM_TUTOR_PLUGINS
     OpcodeCounter
+    MyPass
     )
 
 set(OpcodeCounter_SOURCES
   OpcodeCounter.cpp)
+set(MyPass_SOURCES
+        MyPass.cpp)
 
 # CONFIGURE THE PLUGIN LIBRARIES
 # ==============================
