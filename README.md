@@ -41,6 +41,13 @@ opt-17 -load-pass-plugin ./libHelloWorld.so -passes=hello-world -disable-output 
 
 ```
 
+## MyPass
+前面都是直接抄来的，这里自己参考写一下，虽然也没什么，就当练练手：
+```shell
+ubuntu@VM-16-9-ubuntu:~/mylab/LLVM-Demo/llvm-tutor/build$ clang-17 -O1 -S -emit-llvm /home/ubuntu/mylab/LLVM-Demo/llvm-tutor/inputs/input_for_hello.c -o input_for_hello.ll
+ubuntu@VM-16-9-ubuntu:~/mylab/LLVM-Demo/llvm-tutor/build$ opt-17 -load-pass-plugin ./lib/libMyPass.so -passes=my-pass  -disable-output ./input_for_hello.ll
+```
+![img.png](img.png)
 
 ## OpcodeCounter
 OpcodeCounter 类是一个 FunctionAnalysis，它负责实际对函数进行分析并生成相应的结果。在 LLVM 中，FunctionAnalysis OpcodeCounter 类实现了对函数中所有指令的操作码进行提取，并返回对应的字符串结果。
