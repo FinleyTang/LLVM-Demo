@@ -55,3 +55,32 @@ OpcodeCounter 类是一个 FunctionAnalysis，它负责实际对函数进行分�
 OpcodeCounterPrinter 类是一个 Pass，它将 MyAnalysis 包装成一个可被 LLVM 工具链调用的 pass。Pass 是 LLVM 中用于表示各种转换、分析和优化的基本单元，可以在 LLVM 的优化流水线中组合使用。OpcodeCounterPrinter 类中的 run 函数负责打印分析结果，并返回表示分析没有修改 LLVM IR 代码的标记。
 
 因此，两个类的设计是符合 LLVM 框架中分析和优化的一般模式的：一个类负责实际的分析过程，另一个类负责将该分析包装成一个可被 LLVM 工具链调用的 pass。这样的设计使得分析部分和 pass 部分的职责清晰，易于维护和组合使用。
+
+
+## OpcodeCounter
+我自己写了一个MyOpcodeCount 其实是完全模仿OpcodeCounter, 但是是清空之后 基本从头构建的。
+虽然是完全模仿，但是在做的过程中还是遇到不少问题。主要是由于自己的C++基础比较弱。
+这里也提一下，给自己一个记录。
+
+主要问题在于，在头文件中定义了：
+OpcodeCounter::Result generateOpcodeMap(llvm::Function &F);
+
+然后我在cpp文件中就直接复制过去实现了，
+```C++
+MyOpcodeCount::Result generateMyOpcodeMap(llvm::Function &F){
+//my code
+}
+```
+导致报错：
+![img_3.png](img_3.png)
+可以看懂，编译没有问题，运行出现问题了。（这种情况我很久以前就遇到过，所以这里着重记录一下）
+
+问题的关键是 这个是属于类中的方法； 在cpp代码中的实现应该是：
+```C++
+MyOpcodeCount::Result MyOpcodeCount::generateMyOpcodeMap(llvm::Function &F){
+//my code
+}
+```
+
+调整后运行：
+![img_1.png](img_1.png)

@@ -3,13 +3,15 @@
 set(LLVM_TUTOR_PLUGINS
     OpcodeCounter
     MyPass
+    MyOpcodeCount
     )
 
 set(OpcodeCounter_SOURCES
   OpcodeCounter.cpp)
 set(MyPass_SOURCES
         MyPass.cpp)
-
+set(MyOpcodeCount_SOURCES
+        MyOpcodeCount.cpp)
 # CONFIGURE THE PLUGIN LIBRARIES
 # ==============================
 foreach( plugin ${LLVM_TUTOR_PLUGINS} )
