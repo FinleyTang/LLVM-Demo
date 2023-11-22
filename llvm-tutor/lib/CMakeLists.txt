@@ -4,6 +4,7 @@ set(LLVM_TUTOR_PLUGINS
     OpcodeCounter
     MyPass
     MyOpcodeCount
+    MyInjectFuncCall
     )
 
 set(OpcodeCounter_SOURCES
@@ -12,6 +13,8 @@ set(MyPass_SOURCES
         MyPass.cpp)
 set(MyOpcodeCount_SOURCES
         MyOpcodeCount.cpp)
+set(MyInjectFuncCall_SOURCES
+        MyInjectFuncCall.cpp)
 # CONFIGURE THE PLUGIN LIBRARIES
 # ==============================
 foreach( plugin ${LLVM_TUTOR_PLUGINS} )

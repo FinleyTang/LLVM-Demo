@@ -73,7 +73,7 @@ MyOpcodeCount::Result generateMyOpcodeMap(llvm::Function &F){
 ```
 导致报错：
 ![img_3.png](img_3.png)
-可以看懂，编译没有问题，运行出现问题了。（这种情况我很久以前就遇到过，所以这里着重记录一下）
+可以看到，编译没有问题，运行出现问题了。（这种情况我很久以前就遇到过，所以这里着重记录一下）
 
 问题的关键是 这个是属于类中的方法； 在cpp代码中的实现应该是：
 ```C++
@@ -84,3 +84,11 @@ MyOpcodeCount::Result MyOpcodeCount::generateMyOpcodeMap(llvm::Function &F){
 
 调整后运行：
 ![img_1.png](img_1.png)
+
+## 插桩，从hello world开始
+
+
+![img_4.png](img_4.png)
+
+查看一下ir文件
+![img_5.png](img_5.png)
