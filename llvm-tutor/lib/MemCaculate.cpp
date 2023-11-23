@@ -5,12 +5,13 @@
 #include "MemCaculate.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
-
+#include <iostream>
+#include <string>
 using namespace llvm;
 
 // Pretty-prints the result of this analysis
-static void printMemCaculateResult(llvm::raw_ostream &,
-                                     const ResultMemCaculate &OC);
+//static void printMemCaculateResult(llvm::raw_ostream &,
+//                                     const ResultMemCaculate &OC);
 
 //-----------------------------------------------------------------------------
 // MemCaculate implementation
@@ -19,18 +20,34 @@ llvm::AnalysisKey MemCaculate::Key;
 
 MemCaculate::Result MemCaculate::generateMemMap(llvm::Function &Func) {
     MemCaculate::Result memMap;
+    int malloc_count =0;
+    int calloc_count = 0;
+    int realloc_count = 0;
 
+    std::cout <<"===================="<< Func.getName().str()<<"====================="<<std::endl;
     for (auto &BB : Func) {
         for (auto &Inst : BB) {
-            StringRef Name = Inst.getOpcodeName();
-
-            if (memMap.find(Name) == memMap.end()) {
-                memMap[Inst.getOpcodeName()] = 1;
-            } else {
-                memMap[Inst.getOpcodeName()]++;
+            if (CallInst* CI = dyn_cast<CallInst>(&Inst)) {
+                Function* calledFunction = CI->getCalledFunction();
+                std::cout << calledFunction->getName().str()<<"\n";
+                if (calledFunction && calledFunction->getName() == "malloc") {
+                    malloc_count++;
+                }
+                if (calledFunction && calledFunction->getName() == "calloc") {
+                    calloc_count++;
+                }
+                if (calledFunction && calledFunction->getName() == "realloc") {
+                    realloc_count++;
+                }
             }
         }
     }
+    std::cout <<  "malloc_count: ";
+    std::cout << malloc_count<<std::endl;
+    std::cout << "calloc_count: ";
+    std::cout << calloc_count<<std::endl;
+    std::cout << "realloc_count: ";
+    std::cout << realloc_count<<std::endl;
 
     return memMap;
 }
@@ -43,14 +60,6 @@ MemCaculate::Result MemCaculate::run(llvm::Function &Func,
 PreservedAnalyses MemCaculatePrinter::run(Function &Func,
                                             FunctionAnalysisManager &FAM) {
     auto &MemMap = FAM.getResult<MemCaculate>(Func);
-
-    // In the legacy PM, the following string is printed automatically by the
-    // pass manager. For the sake of consistency, we're adding this here so that
-    // it's also printed when using the new PM.
-    OS << "Printing analysis 'MemCaculate Pass' for function '"
-       << Func.getName() << "':\n";
-
-    printMemCaculateResult(OS, MemMap);
     return PreservedAnalyses::all();
 }
 
@@ -73,21 +82,13 @@ llvm::PassPluginLibraryInfo getMemCaculatePluginInfo() {
                             }
                             return false;
                         });
-                // #2 REGISTRATION FOR "-O{1|2|3|s}"
-                // Register MemCaculatePrinter as a step of an existing pipeline.
-                // The insertion point is specified by using the
-                // 'registerVectorizerStartEPCallback' callback. To be more precise,
-                // using this callback means that MemCaculatePrinter will be called
-                // whenever the vectoriser is used (i.e. when using '-O{1|2|3|s}'.
+
                 PB.registerVectorizerStartEPCallback(
                         [](llvm::FunctionPassManager &PM,
                            llvm::OptimizationLevel Level) {
                             PM.addPass(MemCaculatePrinter(llvm::errs()));
                         });
-                // #3 REGISTRATION FOR "FAM.getResult<MemCaculate>(Func)"
-                // Register MemCaculate as an analysis pass. This is required so that
-                // MemCaculatePrinter (or any other pass) can request the results
-                // of MemCaculate.
+
                 PB.registerAnalysisRegistrationCallback(
                         [](FunctionAnalysisManager &FAM) {
                             FAM.registerPass([&] { return MemCaculate(); });
@@ -101,24 +102,3 @@ llvmGetPassPluginInfo() {
     return getMemCaculatePluginInfo();
 }
 
-//------------------------------------------------------------------------------
-// Helper functions - implementation
-//------------------------------------------------------------------------------
-static void printMemCaculateResult(raw_ostream &OutS,
-                                     const ResultMemCaculate &memMap) {
-    OutS << "================================================="
-         << "\n";
-    OutS << "LLVM-TUTOR: MemCaculate results\n";
-    OutS << "=================================================\n";
-    const char *str1 = "OPCODE";
-    const char *str2 = "#TIMES USED";
-    OutS << format("%-20s %-10s\n", str1, str2);
-    OutS << "-------------------------------------------------"
-         << "\n";
-    for (auto &Inst : memMap) {
-        OutS << format("%-20s %-10lu\n", Inst.first().str().c_str(),
-                       Inst.second);
-    }
-    OutS << "-------------------------------------------------"
-         << "\n\n";
-}

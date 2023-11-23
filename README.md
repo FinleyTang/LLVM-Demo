@@ -184,3 +184,134 @@ strVar->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 ```
 
 ![img_7.png](img_7.png)
+
+
+## 统计alloc分配次数
+这里我创建了一个MemCaculate类，用来统计alloc分配次数，关键代码如下：
+```c++
+    int malloc_count =0;
+    int calloc_count = 0;
+    int realloc_count = 0;
+
+    std::cout <<"===================="<< Func.getName().str()<<"====================="<<std::endl;
+    for (auto &BB : Func) {
+        for (auto &Inst : BB) {
+            if (CallInst* CI = dyn_cast<CallInst>(&Inst)) {
+                Function* calledFunction = CI->getCalledFunction();
+                std::cout << calledFunction->getName().str()<<"\n";
+                if (calledFunction && calledFunction->getName() == "malloc") {
+                    malloc_count++;
+                }
+                if (calledFunction && calledFunction->getName() == "calloc") {
+                    calloc_count++;
+                }
+                if (calledFunction && calledFunction->getName() == "realloc") {
+                    realloc_count++;
+                }
+            }
+        }
+    }
+    std::cout <<  "malloc_count: ";
+    std::cout << malloc_count<<std::endl;
+    std::cout << "calloc_count: ";
+    std::cout << calloc_count<<std::endl;
+    std::cout << "realloc_count: ";
+    std::cout << realloc_count<<std::endl;
+```
+
+然后写了一个测试用例：
+```c++
+//
+// Created by ftang on 2023/11/23.
+//
+#include <stdio.h>
+#include <stdlib.h>
+
+void testMalloc() {
+    int* ptr = (int*)malloc(sizeof(int));
+    if (ptr != NULL) {
+        *ptr = 10;
+        printf("Malloc: %d\n", *ptr);
+        free(ptr);
+    }
+}
+
+void testCalloc() {
+    int* ptr = (int*)calloc(5, sizeof(int));
+    if (ptr != NULL) {
+        for (int i = 0; i < 5; i++) {
+            ptr[i] = i;
+        }
+        printf("Calloc: ");
+        for (int i = 0; i < 5; i++) {
+            printf("%d ", ptr[i]);
+        }
+        printf("\n");
+        free(ptr);
+    }
+}
+
+void testRealloc() {
+    int* ptr = (int*)malloc(5 * sizeof(int));
+    if (ptr != NULL) {
+        printf("Realloc (Before): ");
+        for (int i = 0; i < 5; i++) {
+            ptr[i] = i;
+            printf("%d ", ptr[i]);
+        }
+        printf("\n");
+
+        ptr = (int*)realloc(ptr, 10 * sizeof(int));
+        if (ptr != NULL) {
+            printf("Realloc (After): ");
+            for (int i = 0; i < 10; i++) {
+                ptr[i] = i;
+                printf("%d ", ptr[i]);
+            }
+            printf("\n");
+            free(ptr);
+        }
+    }
+}
+
+```
+然而，运行发现，实际统计的跟预期不符合，比如testMalloc里面没有malloc？
+
+查看ll文件，发现确实是没有的
+
+![img_9.png](img_9.png)
+这时想到，应该是优化了，回头看生成ll文件时果然用了O1,改为O0后结果如下：
+```shell
+ubuntu@VM-16-9-ubuntu:~/mylab/llvm-tutor/build$ clang-17 -O0 -S -emit-llvm /home/ubuntu/mylab/llvm-tutor/inputs/input_for_mem_caculate.c -o input_for_mem_caculate.ll
+ubuntu@VM-16-9-ubuntu:~/mylab/llvm-tutor/build$ opt-17 -load-pass-plugin ./lib/libMemCaculate.so -passes="mem-caculate" -disable-output ./input_for_mem_caculate.ll 
+====================testMalloc=====================
+malloc
+printf
+free
+malloc_count: 1
+calloc_count: 0
+realloc_count: 0
+====================testCalloc=====================
+calloc
+printf
+printf
+printf
+free
+malloc_count: 0
+calloc_count: 1
+realloc_count: 0
+====================testRealloc=====================
+malloc
+printf
+printf
+printf
+realloc
+printf
+printf
+printf
+free
+malloc_count: 1
+calloc_count: 0
+realloc_count: 1
+
+```
