@@ -87,7 +87,59 @@ MyOpcodeCount::Result MyOpcodeCount::generateMyOpcodeMap(llvm::Function &F){
 
 ## 插桩，从hello world开始
 
+关键代码如下：
+```c++
+bool MyInjectFuncCall::runOnModule(Module &M) {
+  auto &ctx = M.getContext();
+    //创建字符串常量
+    llvm::Constant *strConstant = llvm::ConstantDataArray::getString(ctx, "Hello, world\n");
+    llvm::GlobalVariable *strVar = new llvm::GlobalVariable(M, strConstant->getType(), true, llvm::GlobalValue::InternalLinkage, strConstant);
+    strVar->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
+    // 获取 printf 函数的声明
+    llvm::FunctionType *printfType = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(ctx), llvm::PointerType::get(llvm::Type::getInt8Ty(ctx), 0), true);
+    llvm::FunctionCallee printfFunc = M.getOrInsertFunction("printf", printfType);
+
+    // 在每个函数的开头插入 printf 调用指令
+    for (llvm::Module::iterator funcIter = M.begin(), funcEnd = M.end(); funcIter != funcEnd; ++funcIter) {
+        llvm::Function &F = *funcIter;
+        if (F.isDeclaration())
+            continue;
+        llvm::BasicBlock &entryBlock = F.getEntryBlock();
+        llvm::Instruction &firstInstruction = *(entryBlock.getFirstInsertionPt());
+        llvm::IRBuilder<> builder(&firstInstruction);
+        llvm::Value *args[] = {builder.CreateBitCast(strVar, llvm::Type::getInt8PtrTy(ctx))};
+        builder.CreateCall(printfFunc, args);
+    }
+
+  return true;
+}
+```
+###  llvm::FunctionType::get的参数
+
+
+### 函数类型的定义
+为什么要有：llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(ctx), llvm::PointerType::get(llvm::Type::getInt8Ty(ctx), 0), true);
+llvm::FunctionType::get 是 LLVM 中用于创建函数类型的静态方法，它接受以下参数：
+
+returnType：表示函数的返回类型。这个参数指定了函数返回值的类型，可以是整数、浮点数、指针等类型。
+
+paramTypes：表示函数的参数类型列表。这是一个数组，用于指定函数的各个参数的类型。每个元素都表示一个参数的类型，可以是整数、浮点数、指针等类型。
+
+isVarArg：一个布尔值，表示函数是否支持可变参数。如果设为 true，则表示函数支持可变参数；如果设为 false，则表示函数不支持可变参数。
+
+综合起来，llvm::FunctionType::get 方法的作用是创建一个**函数类型对象**，其中包括函数的返回类型、参数类型列表以及是否支持可变参数。这个函数类型对象可以用于声明函数或者获取函数指针，以便在 LLVM IR 中进行函数调用。
+
+### 函数的声明
+llvm::FunctionCallee printfFunc = M.getOrInsertFunction("printf", printfType); 
+这行代码是在 LLVM IR 中声明一个函数，并返回对该函数的引用
+
+**为什么不直接用llvm::FunctionCallee printfFunc = M.getOrInsertFunction("printf", printfType); 而是先llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(ctx), llvm::PointerType::get(llvm::Type::getInt8Ty(ctx), 0), true);**
+在 LLVM 中，首先需要定义函数的类型（FunctionType），然后才能使用这个类型来声明或者获取函数。这是因为在 LLVM 中，函数的类型和函数本身是分开定义的。
+
+所以在这段代码中，先使用 llvm::FunctionType::get() 方法创建了一个名为 printfType 的函数类型对象，表示 printf 函数的类型。然后再使用这个类型来声明或获取函数，即 llvm::FunctionCallee printfFunc = M.getOrInsertFunction("printf", printfType);。
+
+这样做的好处是可以明确地定义函数的类型，并且在整个 LLVM IR 中可以复用这个类型。此外，如果有多个函数需要使用相同的类型，也可以避免重复定义，提高了代码的可维护性和可读性。
 ![img_4.png](img_4.png)
 
 查看一下ir文件
