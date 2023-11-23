@@ -159,3 +159,12 @@ llvm::Value *args[] = {builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy
 builder.CreateCall(printfFunc, args);
 ```
 ![img_6.png](img_6.png)
+
+
+对比一下创建全局变量的：
+```c++
+    llvm::Constant *strConstant = llvm::ConstantDataArray::getString(ctx, "Hello, world\n");
+    llvm::GlobalVariable *strVar = new llvm::GlobalVariable(M, strConstant->getType(), true, llvm::GlobalValue::InternalLinkage, strConstant);
+    strVar->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+```
+差异还是挺大的。
