@@ -58,8 +58,23 @@ bool MyInjectFuncCall::runOnModule(Module &M) {
         llvm::BasicBlock &entryBlock = F.getEntryBlock();
         llvm::Instruction &firstInstruction = *(entryBlock.getFirstInsertionPt());
         llvm::IRBuilder<> builder(&firstInstruction);
-        llvm::Value *args[] = {builder.CreateBitCast(strVar, llvm::Type::getInt8PtrTy(ctx))};
+
+//        llvm::Constant *func_Constant = llvm::ConstantDataArray::getString(ctx, fname);
+//        llvm::AllocaInst* func_name = builder.CreateAlloca(localVarType, nullptr, fname);
+        StringRef fname = F.getName().str()+"\n";
+        llvm::Type* localType = llvm::ArrayType::get(llvm::IntegerType::get(ctx, 8), fname.size() + 1);
+        llvm::AllocaInst* local_Var = builder.CreateAlloca(localType, nullptr, "funcName");
+
+        llvm::Constant* localConstant = llvm::ConstantDataArray::getString(ctx, fname, true);
+        builder.CreateStore(localConstant, local_Var);
+
+//        llvm::Value *args[] = {builder.CreateBitCast(strVar, llvm::Type::getInt8PtrTy(ctx)),
+//                               builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
+//        };
+        llvm::Value *args[] = {builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
+        };
         builder.CreateCall(printfFunc, args);
+//        builder.CreateCall(printfFunc, args);
     }
 
 

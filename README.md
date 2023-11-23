@@ -144,3 +144,18 @@ llvm::FunctionCallee printfFunc = M.getOrInsertFunction("printf", printfType);
 
 查看一下ir文件
 ![img_5.png](img_5.png)
+
+## 创建局部变量并打印函数名
+```c++
+StringRef fname = F.getName().str()+"\n";
+llvm::Type* localType = llvm::ArrayType::get(llvm::IntegerType::get(ctx, 8), fname.size() + 1);
+llvm::AllocaInst* local_Var = builder.CreateAlloca(localType, nullptr, "funcName");
+
+llvm::Constant* localConstant = llvm::ConstantDataArray::getString(ctx, fname, true);
+builder.CreateStore(localConstant, local_Var);
+
+llvm::Value *args[] = {builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
+};
+builder.CreateCall(printfFunc, args);
+```
+![img_6.png](img_6.png)
