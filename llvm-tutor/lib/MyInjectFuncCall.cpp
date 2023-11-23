@@ -41,7 +41,7 @@ using namespace llvm;
 //-----------------------------------------------------------------------------
 bool MyInjectFuncCall::runOnModule(Module &M) {
   auto &ctx = M.getContext();
-    llvm::Constant *strConstant = llvm::ConstantDataArray::getString(ctx, "Hello, world\n");
+    llvm::Constant *strConstant = llvm::ConstantDataArray::getString(ctx, "Hello, world %s\n");
     llvm::GlobalVariable *strVar = new llvm::GlobalVariable(M, strConstant->getType(), true, llvm::GlobalValue::InternalLinkage, strConstant);
     strVar->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
@@ -61,18 +61,18 @@ bool MyInjectFuncCall::runOnModule(Module &M) {
 
 //        llvm::Constant *func_Constant = llvm::ConstantDataArray::getString(ctx, fname);
 //        llvm::AllocaInst* func_name = builder.CreateAlloca(localVarType, nullptr, fname);
-        StringRef fname = F.getName().str()+"\n";
+        StringRef fname = F.getName().str();
         llvm::Type* localType = llvm::ArrayType::get(llvm::IntegerType::get(ctx, 8), fname.size() + 1);
         llvm::AllocaInst* local_Var = builder.CreateAlloca(localType, nullptr, "funcName");
 
         llvm::Constant* localConstant = llvm::ConstantDataArray::getString(ctx, fname, true);
         builder.CreateStore(localConstant, local_Var);
 
-//        llvm::Value *args[] = {builder.CreateBitCast(strVar, llvm::Type::getInt8PtrTy(ctx)),
-//                               builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
-//        };
-        llvm::Value *args[] = {builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
+        llvm::Value *args[] = {builder.CreateBitCast(strVar, llvm::Type::getInt8PtrTy(ctx)),
+                               builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
         };
+//        llvm::Value *args[] = {builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx)),
+//                               builder.CreateBitCast(local_Var, llvm::Type::getInt8PtrTy(ctx))
         builder.CreateCall(printfFunc, args);
 //        builder.CreateCall(printfFunc, args);
     }

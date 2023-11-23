@@ -168,3 +168,19 @@ builder.CreateCall(printfFunc, args);
     strVar->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 ```
 差异还是挺大的。
+
+## 尝试打印hello world和函数名
+我尝试构造
+printf("Hello world\n", funcName);
+但是C++ 是不能这么处理的
+print("Hello world %s", funcName);
+所以第一个参数应该"Hello world %s"
+第二个参数应该是funcName
+这里第一个参数直接写为：
+``` 
+llvm::Constant *strConstant = llvm::ConstantDataArray::getString(ctx, "Hello, world %s\n");
+llvm::GlobalVariable *strVar = new llvm::GlobalVariable(M, strConstant->getType(), true, llvm::GlobalValue::InternalLinkage, strConstant);
+strVar->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+```
+
+![img_7.png](img_7.png)
